@@ -1,0 +1,188 @@
+buildscript {
+    ext {
+        springBootVersion = "1.4.5.RELEASE"
+    }
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven { url "http://repo.spring.io/plugins-release" }
+        maven { url "https://plugins.gradle.org/m2/" }
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath("org.springframework.build.gradle:propdeps-plugin:0.0.7")
+        classpath("gradle.plugin.at.comm_unity.gradle.plugins:jpamodelgen-plugin:1.1.1")
+        classpath 'net.researchgate:gradle-release:2.0.2'
+    }
+}
+
+plugins {
+    id "at.comm_unity.gradle.plugins.jpamodelgen" version "1.1.1"
+}
+
+group = 'com.irs.incident.reporting'
+description = 'incident-reporting-service'
+
+repositories {
+    mavenCentral()
+    jcenter()
+    maven { url "https://repository.cloudera.com/artifactory/cloudera-repos/" }
+    maven { url "http://conjars.org/repo" }
+    maven {
+        url nexus_release_url
+        credentials {
+            username nexus_user
+            password nexus_password
+        }
+    }
+    maven {
+        url nexus_snapshot_url
+        credentials {
+            username nexus_user
+            password nexus_password
+        }
+    }
+}
+
+
+// Sonar Setup
+
+
+apply plugin: 'maven-publish'
+apply plugin: "java"
+apply plugin: "eclipse"
+apply plugin: "idea"
+apply plugin: 'maven'
+apply plugin: "org.springframework.boot"
+apply plugin: "propdeps"
+apply plugin: "at.comm_unity.gradle.plugins.jpamodelgen"
+
+
+idea {
+    module {
+        testSourceDirs += file('src/test/java-integration')
+    }
+}
+
+jar {
+    baseName = "incident-reporting-service"
+}
+//noinspection GroovyUnusedAssignment
+sourceCompatibility = 1.8
+//noinspection GroovyUnusedAssignment
+targetCompatibility = 1.8
+
+dependencies {
+    compile("org.springframework.boot:spring-boot-starter:${springBootVersion}")
+    compile("org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}")
+    compile("org.springframework.boot:spring-boot-starter-cache:${springBootVersion}")
+    compile("org.springframework.boot:spring-boot-starter-logging:${springBootVersion}")
+    compile("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
+    compile("org.springframework.boot:spring-boot-starter-data-jpa:${springBootVersion}")
+    compile("org.springframework.boot:spring-boot-loader:${springBootVersion}")
+    compile("io.springfox:springfox-swagger-ui:2.4.0")
+    compile("io.springfox:springfox-swagger2:2.4.0")
+    compile("org.apache.commons:commons-pool2:2.4.2")
+    compile('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.8.3')
+    compile('org.flywaydb:flyway-core:3.0')
+
+    
+    compile("org.jooq:jooq:3.6.1")
+
+    compile('org.postgresql:postgresql:9.4.1210')
+
+    compile("com.zaxxer:HikariCP:2.4.5")
+
+
+  testCompile("org.springframework.boot:spring-boot-starter-test:${springBootVersion}")
+    testCompile("org.assertj:assertj-core:3.3.0")
+    testCompile("org.mockito:mockito-core:1.10.19") {
+        exclude group: "org.hamcrest"
+    }
+
+    optional "org.springframework.boot:spring-boot-configuration-processor"
+}
+
+sourceSets {
+    test {
+        java.srcDir 'src/test/java-integration'
+    }
+
+    main {
+        java {
+            srcDir 'src/main/java'
+            srcDir 'src/generated/java'
+        }
+    }
+}
+
+jpaModelgen {
+    library = "org.hibernate:hibernate-jpamodelgen:5.0.7.Final"
+    jpaModelgenSourcesDir = "src/generated/java"
+}
+
+
+
+test {
+    dependsOn clean
+    if(project.hasProperty('excludeTests')){
+        exclude project.property('excludeTests')
+    }
+}
+
+compileJava.options.compilerArgs += ["-proc:none"]
+
+compileJava.dependsOn(processResources)
+
+clean.finalizedBy(compileJpaModelgen)
+
+
+//add DB-Setup scripts to distpackage
+task irsDistFatJar(type: Copy) {
+  dependsOn build
+  from "${project.buildDir}/libs/${project.archivesBaseName}-${project.version}.jar"
+  into "${project.buildDir}/distZip"
+  include '**/*.jar'
+}
+
+task irsDistLibs(type: Copy) {
+  dependsOn build
+  from configurations.runtime
+  into "${project.buildDir}/distZip/libs"
+}
+
+task irsDistBins(type: Copy) {
+  dependsOn build
+  from "${project.buildDir}/scripts"
+  into "${project.buildDir}/distZip/bin"
+}
+
+task irsDistConf(type: Copy) {
+  from "conf/docker"
+  into "${project.buildDir}/distZip/conf"
+}
+
+task irsDistScript(type: Copy) {
+  from "conf/migrations"
+  into "${project.buildDir}/distZip/migrations"
+}
+
+task irsDistZip(type: Zip) {
+  dependsOn irsDistFatJar
+  dependsOn irsDistConf
+  dependsOn irsDistScript
+  dependsOn irsDistLibs
+  dependsOn irsDistBins
+  from "${project.buildDir}/distZip"
+}
+
+def distZipFile = file("build/distributions/${project.archivesBaseName}-${project.version}.zip")
+def jarFile = file("build/libs/${project.archivesBaseName}-${project.version}.jar")
+
+
+artifacts {
+  archives distZipFile
+  archives jarFile
+}
+
+uploadArchives.dependsOn irsDistZip
