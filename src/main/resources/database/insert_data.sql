@@ -1,3 +1,8 @@
+insert into UserType (UserTypeName) values ("Victim");
+insert into UserType (UserTypeName) values ("Reporter");
+insert into UserType (UserTypeName) values ("Admin");
+insert into UserType (UserTypeName) values ("System");
+
 insert into Country (CountryName) values("India");
 
 insert into State (StateName, FKCountryID) values("Maharashtra",1);
