@@ -1,42 +1,42 @@
-package com.irs.incident.reporting.controller;
+package com.irs.incident.reporting.service;
 
+import java.util.List;
+
+import javax.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import com.irs.incident.reporting.dto.NoteDto;
 import com.irs.incident.reporting.model.Note;
 import com.irs.incident.reporting.model.repository.NoteRepository;
-import com.irs.incident.reporting.service.NoteService;
 
-import javax.validation.Valid;
-import java.util.List;
-
-@RestController
-@RequestMapping("/api")
-public class NoteController {
+@Service
+@Transactional(rollbackFor = Exception.class)
+public class NoteService {
+	
+    private NoteRepository noteRepository;
 
     @Autowired
-    NoteRepository noteRepository;
+    NoteService(NoteRepository noteRepository) {
+        this.noteRepository = noteRepository;
+    }
     
-    @Autowired
-    private NoteService noteService;
-
-    // Get All Notes
-    @GetMapping("/notes")
     public List<Note> getAllNotes() {
         return noteRepository.findAll();
     }
 
-    // Create a new Note
-    @PostMapping("/notes")
-    public Note createNote(@Valid @RequestBody NoteDto note) {
-    	return noteService.createNote(note);
+    public Note createNote(NoteDto note) {
+    	Note dbNode = new Note();
+    	dbNode.setContent(note.getContent());
+    	dbNode.setTitle(note.getTitle());
+        return noteRepository.save(dbNode);
     }
 
-    // Get a Single Note
-    @GetMapping("/notes/{id}")
     public ResponseEntity<Note> getNoteById(@PathVariable(value = "id") Long noteId) {
         Note note = noteRepository.findOne(noteId);
         if(note == null) {
@@ -45,8 +45,6 @@ public class NoteController {
         return ResponseEntity.ok().body(note);
     }
 
-    // Update a Note
-    @PutMapping("/notes/{id}")
     public ResponseEntity<Note> updateNote(@PathVariable(value = "id") Long noteId, 
                                            @Valid @RequestBody Note noteDetails) {
         Note note = noteRepository.findOne(noteId);
@@ -60,8 +58,6 @@ public class NoteController {
         return ResponseEntity.ok(updatedNote);
     }
 
-    // Delete a Note	
-    @DeleteMapping("/notes/{id}")
     public ResponseEntity<Note> deleteNote(@PathVariable(value = "id") Long noteId) {
         Note note = noteRepository.findOne(noteId);
         if(note == null) {
@@ -71,4 +67,5 @@ public class NoteController {
         noteRepository.delete(note);
         return ResponseEntity.ok().build();
     }
+
 }
