@@ -2,14 +2,10 @@ package com.irs.incident.reporting.service;
 
 import java.util.List;
 
-import javax.validation.Valid;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import com.irs.incident.reporting.dto.NoteDto;
 import com.irs.incident.reporting.model.Note;
@@ -37,7 +33,7 @@ public class NoteService {
         return noteRepository.save(dbNode);
     }
 
-    public ResponseEntity<Note> getNoteById(@PathVariable(value = "id") Long noteId) {
+    public ResponseEntity<Note> getNoteById(Long noteId) {
         Note note = noteRepository.findOne(noteId);
         if(note == null) {
             return ResponseEntity.notFound().build();
@@ -45,8 +41,7 @@ public class NoteService {
         return ResponseEntity.ok().body(note);
     }
 
-    public ResponseEntity<Note> updateNote(@PathVariable(value = "id") Long noteId, 
-                                           @Valid @RequestBody Note noteDetails) {
+    public ResponseEntity<Note> updateNote(Long noteId, Note noteDetails) {
         Note note = noteRepository.findOne(noteId);
         if(note == null) {
             return ResponseEntity.notFound().build();
@@ -58,7 +53,7 @@ public class NoteService {
         return ResponseEntity.ok(updatedNote);
     }
 
-    public ResponseEntity<Note> deleteNote(@PathVariable(value = "id") Long noteId) {
+    public ResponseEntity<Note> deleteNote(Long noteId) {
         Note note = noteRepository.findOne(noteId);
         if(note == null) {
             return ResponseEntity.notFound().build();
